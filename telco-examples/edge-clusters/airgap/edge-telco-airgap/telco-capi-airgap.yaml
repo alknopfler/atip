@@ -74,6 +74,11 @@ spec:
   registrationMethod: "control-plane-endpoint"
   privateRegistriesConfig:       # Private registry configuration to add your own mirror and credentials
     mirrors:
+      docker.io:
+        endpoint:
+          - "${PRIVATE_REGISTRY_URL}"
+        rewrite:
+          "^(.*)$": "mirror/$1"
       registry.suse.com:
         endpoint:
           - "${PRIVATE_REGISTRY_URL}"
