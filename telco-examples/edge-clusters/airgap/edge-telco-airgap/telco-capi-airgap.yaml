@@ -74,11 +74,28 @@ spec:
   registrationMethod: "control-plane-endpoint"
   privateRegistriesConfig:       # Private registry configuration to add your own mirror and credentials
     mirrors:
-      docker.io:
+      registry.suse.com:
         endpoint:
-          - "https://$(PRIVATE_REGISTRY_URL)"
+          - "${PRIVATE_REGISTRY_URL}"
+        rewrite:
+          "^(.*)$": "mirror/$1"
+      registry.suse.de:
+        endpoint:
+          - "${PRIVATE_REGISTRY_URL}"
+        rewrite:
+          "^(.*)$": "mirror/$1"
+      registry.opensuse.org:
+        endpoint:
+          - "${PRIVATE_REGISTRY_URL}"
+        rewrite:
+          "^(.*)$": "mirror/$1"
+      registry.rancher.com:
+        endpoint:
+          - "${PRIVATE_REGISTRY_URL}"
+        rewrite:
+          "^(.*)$": "mirror/$1"
     configs:
-      "$(PRIVATE_REGISTRY_URL)":
+      "${PRIVATE_REGISTRY_URL}":
         authSecret:
           apiVersion: v1
           kind: Secret
@@ -167,7 +184,7 @@ spec:
                     name: sriov-crd
                     namespace: kube-system
                   spec:
-                    chart: oci://${PRIVATE_REGISTRY_URL}/sriov-crd
+                    chart: oci://${PRIVATE_REGISTRY_URL}/mirror/sriov-crd
                     dockerRegistrySecret:
                       name: privregauth
                     repoCAConfigMap:
@@ -189,7 +206,7 @@ spec:
                     name: sriov-network-operator
                     namespace: kube-system
                   spec:
-                    chart: oci://${PRIVATE_REGISTRY_URL}/sriov-network-operator
+                    chart: oci://${PRIVATE_REGISTRY_URL}/mirror/sriov-network-operator
                     dockerRegistrySecret:
                       name: privregauth
                     repoCAConfigMap:

@@ -8,6 +8,7 @@ This is an example of using Edge Image Builder (EIB) to generate a management cl
 - Rancher Prime
 - Neuvector
 - SUSE Storage (Longhorn)
+- SUSE Private Registry
 - Static IPs or DHCP network configuration
 - Metal3 and the CAPI provider (if you want to add support for aarch64 architecture, the changes will be explained in `Optional modifications` section of this document)
 
@@ -15,6 +16,8 @@ You need to modify the following values in the `mgmt-cluster-airgap.yaml` file:
 
 - `${ROOT_PASSWORD}` - The root password for the management cluster. This could be generated using `openssl passwd -6 PASSWORD` and replacing PASSWORD with the desired password, and then replacing the value in the `mgmt-cluster-airgap.yaml` file. The final rancher password will be configured based on the file `custom/files/basic-setup.sh`.
 - `${SCC_REGISTRATION_CODE}` - The registration code for the SUSE Customer Center for the SLE Micro product. This could be obtained from the SUSE Customer Center and replacing the value in the `mgmt-cluster-airgap.yaml` file.
+- `${PRIVATE_REGISTRY_USERNAME}` - The username retrieved from [SUSE Private Registry official docs](https://documentation.suse.com/cloudnative/suse-private-registry/html/private-registry/pr-deployment.html#pr-deployment-kube-secrets)
+- `${PRIVATE_REGISTRY_PASSWORD}` - The password retrieved from [SUSE Private Registry official docs](https://documentation.suse.com/cloudnative/suse-private-registry/html/private-registry/pr-deployment.html#pr-deployment-kube-secrets)
 
 > **_IMPORTANT:_**  
 > Keep in mind that the `embeddedArtifactRegistry` is a set of images based on a specific helm repositories version (rancher, metal3 and rke2-capi-provider). If you want to use a different version of the helm repositories, you need to modify the `embeddedArtifactRegistry` values in the `mgmt-cluster-airgap.yaml` file.
@@ -31,6 +34,35 @@ You need to modify the `${MGMT_CLUSTER_IP}` with the Node IP in the following fi
 - `kubernetes/helm/values/metal3.yaml`
 
 - `kubernetes/helm/values/rancher.yaml`
+
+You need to modify the `${MGMT_CLUSTER_REGISTRY_IP}` with a reserved static IP for the SUSE Private Registry in the following file:
+
+- `kubernetes/manifests/metallb-registry.yaml`
+- `kubernetes/helm/values/privateregistry.yaml`
+
+You need to modify the `${DOCKER_CONFIG_JSON_BASE64}`, `${TLS_CRT_BASE64}` and `${TLS_KEY_BASE64}` in the following file:
+
+- `kubernetes/manifests/suse-private-registry-creds.yaml` 
+
+To modify the docker config json (base64) properly you can do the following:
+
+```
+# ${DOCKER_CONFIG_JSON_BASE64} CONTENT
+echo -n "{"auths": {"192.168.x.x": {"username": "xxxxxxx", "password": "yyyyyyy", "auth": "zzzzzzzzzzzzzz"}}}" | base64
+```
+
+where the IP is the same we configured before `${MGMT_CLUSTER_REGISTRY_IP}`, and the `username`, `password` and `auth` can be retrieved from [SUSE Private Registry official docs](https://documentation.suse.com/cloudnative/suse-private-registry/html/private-registry/pr-deployment.html#pr-deployment-kube-secrets)
+
+To modify the tls_crt_base64 and tls_key_base64 variables you can create your own ones doing:
+
+```
+# Generate a self-signed certificate and key
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -sha256 -days 365 -nodes
+
+# Convert them to base64 for the suse-private-registry-creds.yaml file
+cat cert.pem | base64 -w 0
+cat key.pem | base64 -w 0
+```
 
 > **_IMPORTANT:_**  
 > Note that the `custom/scripts/99-register.sh` file is not needed in this scenario.

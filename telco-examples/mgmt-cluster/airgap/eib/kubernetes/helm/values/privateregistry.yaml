@@ -1,0 +1,14 @@
+core:
+  secretName: suse-registry-tls
+expose:
+  tls:
+    certSource: secret
+    enabled: true
+    secret:
+      secretName: suse-registry-tls
+  type: loadBalancer
+    externalURL: https://${MGMT_CLUSTER_REGISTRY_IP}
+    persistence:
+      persistentVolumeClaim:
+        registry:
+          size: 20Gi
