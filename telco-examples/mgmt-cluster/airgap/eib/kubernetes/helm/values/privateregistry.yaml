@@ -7,8 +7,8 @@ expose:
     secret:
       secretName: suse-registry-tls
   type: loadBalancer
-    externalURL: https://${MGMT_CLUSTER_REGISTRY_IP}
-    persistence:
-      persistentVolumeClaim:
-        registry:
-          size: 20Gi
+externalURL: https://${MGMT_CLUSTER_REGISTRY_IP}
+persistence:
+  persistentVolumeClaim:
+    registry:
+      size: 20Gi
