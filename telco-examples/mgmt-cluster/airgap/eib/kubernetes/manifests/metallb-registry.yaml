@@ -1,0 +1,20 @@
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: private-registry
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+  - private-registry-pool
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: private-registry-pool
+  namespace: metallb-system
+spec:
+  addresses:
+  - ${MGMT_CLUSTER_REGISTRY_IP}/32
+  serviceAllocation:
+    namespaces:
+    - suse-private-registry

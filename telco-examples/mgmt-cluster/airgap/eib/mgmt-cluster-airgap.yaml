@@ -20,6 +20,13 @@ kubernetes:
   version: v1.34.2+rke2r1
   helm:
     charts:
+      - createNamespace: true
+        installationNamespace: kube-system
+        name: private-registry-helm
+        repositoryName: privateregistry
+        targetNamespace: suse-private-registry
+        valuesFile: privateregistry.yaml
+        version: 1.1.1
       - name: cert-manager
         repositoryName: jetstack
         version: 1.19.2
@@ -34,6 +41,12 @@ kubernetes:
         createNamespace: true
         installationNamespace: kube-system
         valuesFile: longhorn.yaml
+      - name: metallb
+        version: 305.0.1+up0.15.2
+        targetNamespace: metallb-system
+        createNamespace: true
+        repositoryName: suse-edge-charts
+        installationNamespace: kube-system
       - name: metal3
         version: 305.0.21+up0.13.0
         repositoryName: suse-edge-charts
@@ -82,13 +95,30 @@ kubernetes:
         authentication:
           username: ${APPS.RANCHER.IO_USERNAME}
           password: ${APPS.RANCHER.IO_ACCESS_TOKEN}
+      - name: privateregistry
+        authentication:
+          username: ${PRIVATE_REGISTRY_USERNAME}
+          password: ${PRIVATE_REGISTRY_PASSWORD}
+        plainHTTP: false
+        skipTLSVerify: false
+        url: oci://registry.suse.com/private-registry
 embeddedArtifactRegistry:
   registries:
     - uri: dp.apps.rancher.io
       authentication:
         username: ${APPS.RANCHER.IO_USERNAME}
         password: ${APPS.RANCHER.IO_ACCESS_TOKEN}
+    - uri: registry.suse.com
+      authentication:
+        username: ${PRIVATE_REGISTRY_USERNAME}
+        password: ${PRIVATE_REGISTRY_PASSWORD}
   images:
+    - name: registry.suse.com/private-registry/harbor-core:1.1.1-1.19
+    - name: registry.suse.com/private-registry/harbor-jobservice:1.1.1-1.19
+    - name: registry.suse.com/private-registry/harbor-portal:1.1.1-1.20
+    - name: registry.suse.com/private-registry/harbor-registry:1.1.1-1.19
+    - name: registry.suse.com/private-registry/harbor-registryctl:1.1.1-1.19
+    - name: registry.suse.com/private-registry/harbor-trivy-adapter:1.1.1-1.24
     - name: registry.rancher.com/rancher/hardened-cluster-autoscaler:v1.10.2-build20251015
     - name: registry.rancher.com/rancher/hardened-cni-plugins:v1.8.0-build20251014
     - name: registry.rancher.com/rancher/hardened-coredns:v1.13.1-build20251015
