@@ -78,7 +78,7 @@ The following steps are required to prepare the airgap artifacts using [`seactl`
      -c /opt/cert.pem \
      -r myregistry:5000 \
      --rancher-apps-authfile /opt/rancher-apps-auth.txt \
-     --insecure --debug
+     --debug
    ```
 
    With SUSE Private Registry:
