@@ -48,74 +48,62 @@ cp $(pwd)/output/*.raw base-images/
 
 ### Preparing the airgap artifacts
 
-The following steps are required to prepare the airgap artifacts:
+The following steps are required to prepare the airgap artifacts using [`seactl`](https://github.com/suse-edge/seactl), the SUSE Edge Airgap CLI embedded in the release container image. It handles RKE2 tarball generation, Helm chart OCI mirroring, and container image mirroring in a single command — no separate scripts are needed.
 
-1.Include the rke2 release images to the `custom/files` folder to be consumed by EIB during the build process. 
-  - You can use the [following script](https://github.com/suse-edge/fleet-examples/blob/release-3.5/scripts/day2/edge-save-rke2-images.sh) and the list of images [here](https://github.com/suse-edge/fleet-examples/blob/release-3.5/scripts/day2/edge-release-rke2-images.txt) to generate the artifacts required to be included in `custom/files`. 
-  ```
-  $ ./edge-save-rke2-images.sh -o ~/telco-examples/edge-clusters/airgap/eib/custom/files -l ~/edge-release-rke2-images.txt
-  ...
-  $ tree ~/telco-examples/edge-clusters/airgap/eib/custom/files
-  .
-  |-- install.sh
-  |-- rke2-images-cilium.linux-amd64.tar.zst
-  |-- rke2-images-core.linux-amd64.tar.zst
-  |-- rke2-images-multus.linux-amd64.tar.zst
-  |-- rke2-images.linux-amd64.tar.zst
-  |-- rke2.linux-amd64.tar.gz
-  `-- sha256sum-amd64.txt
-  ```
+1. If your private registry requires authentication, create a registry auth file with base64-encoded credentials:
+   ```
+   $ echo -n "$(echo -n 'myusername' | base64 -w 0):$(echo -n 'mypassword' | base64 -w 0)" > registry-auth.txt
+   ```
 
-2. Preload your registry with the helm-chart oci images required for the edge cluster. 
-  - You need to create a list with the Helm charts required for the edge cluster. For example, for telco scenarios, you can use the following list:
-    ``` 
-    $ cat > edge-release-helm-oci-artifacts.txt <<EOF
-    edge/charts/sriov-network-operator:305.0.4+up1.6.0
-    edge/charts/sriov-crd:305.0.4+up1.6.0
-    EOF
-    ```
-  - Using the [following script](https://github.com/suse-edge/fleet-examples/blob/release-3.5/scripts/day2/edge-save-oci-artefacts.sh) and the list created above, you can generate a tarball containing all necessary Helm charts locally.
-    ```
-    $ ./edge-save-oci-artefacts.sh -al ./edge-release-helm-oci-artifacts.txt -s registry.suse.com
-    Pulled: registry.suse.com/edge/charts/sriov-network-operator:305.0.4+up1.6.0
-    Pulled: registry.suse.com/edge/charts/sriov-crd:305.0.4+up1.6.0
-    a edge-release-oci-tgz-20250120
-    a edge-release-oci-tgz-20250120/sriov-network-operator-304.0.2+up1.5.0.tgz
-    a edge-release-oci-tgz-20250120/sriov-crd-304.0.2+up1.5.0.tgz
-    ```
-  - Upload your tarball to your private registry to preload with the helm chart oci images downloaded using the [following script](https://github.com/suse-edge/fleet-examples/blob/release-3.5/scripts/day2/edge-load-oci-artefacts.sh):
-    ```
-    $ tar zxvf edge-release-oci-tgz-20250120.tgz
-    $ ./edge-load-oci-artefacts.sh -ad edge-release-oci-tgz-20250120 -r myregistry:5000
-    ```
+2. If you use a Rancher Apps chart repository (required for Longhorn and Rancher-sourced charts), create a Rancher Apps auth file:
+   ```
+   $ echo -n "$(echo -n 'myusername@apps.rancher.io' | base64 -w 0):$(echo -n 'mypassword' | base64 -w 0)" > rancher-apps-auth.txt
+   ```
 
-3. Preload your registry with the necessary container images (including your workload ones) required for the edge cluster. 
-  - In this example, we need to include the sriov container images for telco workload (you can get the images from the [helm-chart values](https://github.com/suse-edge/charts/blob/main/charts/sriov-network-operator/1.5.0/values.yaml))
-    ``` 
-    $ cat > edge-release-images.txt <<EOF
-    rancher/hardened-sriov-network-operator:v1.5.0-build20250425
-    rancher/hardened-sriov-network-config-daemon:v1.5.0-build20250425
-    rancher/hardened-sriov-cni:v2.9.0-build20250402
-    rancher/hardened-ib-sriov-cni:v1.2.0-build20250402
-    rancher/hardened-sriov-network-device-plugin:v3.9.0-build20250402
-    rancher/hardened-sriov-network-resources-injector:v1.7.1-build20250402
-    rancher/hardened-sriov-network-webhook:v1.5.0-build20250402
-    EOF
-    ```
-  - Using the [following script](https://github.com/suse-edge/fleet-examples/blob/release-3.5/scripts/day2/edge-save-images.sh) and the list created above, you can generate in local the tarball with the images required for the edge cluster.
-    ```
-    $ ./edge-save-images.sh -l ./edge-release-images.txt -s registry.suse.com
-    Image pull success: registry.suse.com/rancher/hardened-sriov-network-operator:v1.5.0-build20250425
-    Image pull success: registry.suse.com/rancher/hardened-sriov-network-config-daemon:v1.5.0-build20250425
-    Image pull success: registry.suse.com/rancher/hardened-sriov-cni:v2.9.0-build20250402
-    Image pull success: registry.suse.com/rancher/hardened-ib-sriov-cni:v1.2.0-build20250402
-    Image pull success: registry.suse.com/rancher/hardened-sriov-network-device-plugin:v3.9.0-build20250402
-    Image pull success: registry.suse.com/rancher/hardened-sriov-network-resources-injector:v1.7.1-build20250402
-    Image pull success: registry.suse.com/rancher/hardened-sriov-network-webhook:v1.5.0-build20250402
-    Creating edge-images.tar.gz with 7 images
-    ```
-    
-  - Upload your tarball to your private registry to preload with the images downloaded in the previous step using the [following script](https://github.com/suse-edge/fleet-examples/blob/release-3.5/scripts/day2/edge-load-images.sh)
+3. (Optional) If you want to mirror SUSE Private Registry artifacts (Harbor charts/images), create a SUSE Private Registry auth file using your SCC mirroring credentials:
+   ```
+   $ echo -n "$(echo -n 'SUSE_REGISTRY_USERNAME' | base64 -w 0):$(echo -n 'SUSE_REGISTRY_PASSWORD' | base64 -w 0)" > suse-private-registry-auth.txt
+   ```
+
+4. Run the `seactl` mirror command using the release container image to populate your private registry with all required artifacts (RKE2 images, Helm chart OCI images, and container images). Place any auth files and certificates in the current directory so they are accessible inside the container via the `-v ./:/opt:z` bind mount.
+
+   Without SUSE Private Registry (Harbor charts/images will be skipped):
+   ```
+   $ podman run --rm \
+     -v ./:/opt:z \
+     registry.suse.com/edge/3.6/release-manifest:3.6.0 \
+     mirror \
+     -o /opt/output \
+     -a /opt/registry-auth.txt \
+     -c /opt/cert.pem \
+     -r myregistry:5000 \
+     --rancher-apps-authfile /opt/rancher-apps-auth.txt \
+     --debug
+   ```
+
+   With SUSE Private Registry:
+   ```
+   $ podman run --rm \
+     -v ./:/opt:z \
+     registry.suse.com/edge/3.6/release-manifest:3.6.0 \
+     mirror \
+     -o /opt/output \
+     -a /opt/registry-auth.txt \
+     -c /opt/cert.pem \
+     -r myregistry:5000 \
+     --rancher-apps-authfile /opt/rancher-apps-auth.txt \
+     --suse-private-registry-authfile /opt/suse-private-registry-auth.txt \
+     --debug
+   ```
+
+5. Copy the generated RKE2 artifacts from the output directory to the `custom/files` folder to be consumed by EIB during the build process:
+   ```
+   $ cp output/rke2-images*.tar.zst ~/telco-examples/edge-clusters/airgap/eib/custom/files/
+   $ cp output/rke2.linux-amd64.tar.gz ~/telco-examples/edge-clusters/airgap/eib/custom/files/
+   $ cp output/sha256sum-amd64.txt ~/telco-examples/edge-clusters/airgap/eib/custom/files/
+   ```
+
+> **_Note:_** The release container image already bundles `/release_manifest.yaml` and `/release_images.yaml` internally, so no additional manifest files need to be provided. For full flag reference and advanced usage, see the [seactl documentation](https://github.com/suse-edge/seactl/blob/main/README.md).
 
 
 ### Building the Edge Cluster Image using EIB
