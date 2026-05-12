@@ -8,6 +8,10 @@ document.getElementById('multusEnable').addEventListener('change', function() {
     document.getElementById('multusOptions').classList.toggle('hidden', !this.checked);
 });
 
+document.getElementById('sriov').addEventListener('change', function() {
+    document.getElementById('sriovOptions').classList.toggle('hidden', !this.checked);
+});
+
 document.getElementById('nodeConfig').addEventListener('change', function() {
     const isMulti = this.value.includes('multi');
     const hasWorkers = this.value === 'multi-with-workers';
@@ -52,6 +56,7 @@ function generateManifests() {
         useMetallb: document.getElementById('useMetallb').checked,
         deployment: document.getElementById('deployment').value,
         sriov: document.getElementById('sriov').checked,
+        sriovMode: document.getElementById('sriovMode').value,
         cpuManager: document.getElementById('cpuManager').checked,
         cisProfile: document.getElementById('cisProfile').checked,
         generateBMH: document.getElementById('generateBMH').checked
@@ -397,7 +402,41 @@ function generateMultusConfig(config) {
 }
 
 function generateSRIOVConfig(config) {
-    return `
+    if (config.sriovMode === 'auto') {
+        // Auto mode: SR-IOV Operator with auto-discovery
+        return `
+            - path: /var/lib/rancher/rke2/server/manifests/configmap-sriov-custom-auto.yaml
+              overwrite: true
+              contents:
+                inline: |
+                  apiVersion: v1
+                  kind: ConfigMap
+                  metadata:
+                    name: sriov-custom-auto-config
+                    namespace: sriov-network-operator
+                  data:
+                    config.json: |
+                      [
+                         {
+                           "resourceName": "\${RESOURCE_NAME1}",
+                           "interface": "\${SRIOV_NIC_NAME1}",
+                           "pfname": "\${PF_NAME1}",
+                           "driver": "\${DRIVER_NAME1}",
+                           "numVFsToCreate": \${NUM_VFS1}
+                         },
+                         {
+                           "resourceName": "\${RESOURCE_NAME2}",
+                           "interface": "\${SRIOV_NIC_NAME2}",
+                           "pfname": "\${PF_NAME2}",
+                           "driver": "\${DRIVER_NAME2}",
+                           "numVFsToCreate": \${NUM_VFS2}
+                         }
+                      ]
+              mode: 0644
+              user:
+                name: root
+              group:
+                name: root
             - path: /var/lib/rancher/rke2/server/manifests/sriov-crd.yaml
               overwrite: true
               contents:
@@ -428,6 +467,151 @@ function generateSRIOVConfig(config) {
                     version: 305.0.4+up1.6.0
                     createNamespace: true
               mode: 0644`;
+    } else {
+        // Manual mode: Device Plugin with DPDK/FEC support
+        return `
+            - path: /var/lib/rancher/rke2/server/manifests/sriov-dp-daemonset.yaml
+              overwrite: true
+              contents:
+                inline: |
+                  ---
+                  apiVersion: v1
+                  kind: ServiceAccount
+                  metadata:
+                    name: sriov-device-plugin
+                    namespace: kube-system
+                  ---
+                  apiVersion: apps/v1
+                  kind: DaemonSet
+                  metadata:
+                    name: kube-sriov-device-plugin-amd64
+                    namespace: kube-system
+                    labels:
+                      tier: node
+                      app: sriovdp
+                  spec:
+                    selector:
+                      matchLabels:
+                        name: sriov-device-plugin
+                    template:
+                      metadata:
+                        labels:
+                          name: sriov-device-plugin
+                          tier: node
+                          app: sriovdp
+                      spec:
+                        hostNetwork: true
+                        nodeSelector:
+                          kubernetes.io/arch: amd64
+                        tolerations:
+                        - key: node-role.kubernetes.io/master
+                          operator: Exists
+                          effect: NoSchedule
+                        - key: node-role.kubernetes.io/control-plane
+                          operator: Exists
+                          effect: NoSchedule
+                        serviceAccountName: sriov-device-plugin
+                        containers:
+                        - name: kube-sriovdp
+                          image: rancher/hardened-sriov-network-device-plugin:v3.7.0-build20240816
+                          imagePullPolicy: IfNotPresent
+                          args:
+                          - --log-dir=sriovdp
+                          - --log-level=10
+                          securityContext:
+                            privileged: true
+                          resources:
+                            requests:
+                              cpu: "250m"
+                              memory: "40Mi"
+                            limits:
+                              cpu: 1
+                              memory: "200Mi"
+                          volumeMounts:
+                          - name: devicesock
+                            mountPath: /var/lib/kubelet/device-plugins
+                            readOnly: false
+                          - name: plugins-registry
+                            mountPath: /var/lib/kubelet/plugins_registry
+                            readOnly: false
+                          - name: log
+                            mountPath: /var/log
+                          - name: config-volume
+                            mountPath: /etc/pcidp
+                          - name: device-info
+                            mountPath: /var/run/k8s.cni.cncf.io/devinfo/dp
+                        volumes:
+                          - name: devicesock
+                            hostPath:
+                              path: /var/lib/kubelet/device-plugins
+                          - name: plugins-registry
+                            hostPath:
+                              path: /var/lib/kubelet/plugins_registry
+                          - name: log
+                            hostPath:
+                              path: /var/log
+                          - name: device-info
+                            hostPath:
+                              path: /var/run/k8s.cni.cncf.io/devinfo/dp
+                              type: DirectoryOrCreate
+                          - name: config-volume
+                            configMap:
+                              name: sriovdp-config
+                              items:
+                              - key: config.json
+                                path: config.json
+              mode: 0644
+              user:
+                name: root
+              group:
+                name: root
+            - path: /var/lib/rancher/rke2/server/manifests/configmap-sriov.yaml
+              overwrite: true
+              contents:
+                inline: |
+                  apiVersion: v1
+                  kind: ConfigMap
+                  metadata:
+                    name: sriovdp-config
+                    namespace: kube-system
+                  data:
+                    config.json: |
+                      {
+                          "resourceList": [
+                              {
+                                  "resourceName": "intel_fec_5g",
+                                  "devicetype": "accelerator",
+                                  "selectors": {
+                                      "vendors": ["\${SRIOV_VENDOR}"],
+                                      "devices": ["\${SRIOV_DEVICE}"]
+                                  }
+                              },
+                              {
+                                  "resourceName": "intel_sriov_odu",
+                                  "selectors": {
+                                      "vendors": ["\${SRIOV_VENDOR}"],
+                                      "devices": ["\${SRIOV_DEVICE}"],
+                                      "drivers": ["vfio-pci"],
+                                      "pfNames": ["\${SRIOV_NET_INTERFACE}"]
+                                  }
+                              },
+                              {
+                                  "resourceName": "intel_sriov_oru",
+                                  "selectors": {
+                                      "vendors": ["\${SRIOV_VENDOR}"],
+                                      "devices": ["\${SRIOV_DEVICE}"],
+                                      "drivers": ["vfio-pci"],
+                                      "pfNames": ["\${SRIOV_NET_INTERFACE}"]
+                                  }
+                              }
+                            ]
+                      }
+              mode: 0644
+              user:
+                name: root
+              group:
+                name: root`;
+    }
 }
 
 function generateMetalLBConfig(config) {
@@ -603,6 +787,49 @@ function generateSystemdUnits(config) {
                 ExecStart=/bin/sh -c "/opt/performance-settings/performance-settings.sh"
                 [Install]
                 WantedBy=multi-user.target`;
+    }
+
+    if (config.sriov) {
+        if (config.sriovMode === 'auto') {
+            units += `
+            - name: sriov-custom-auto-vfs.service
+              enabled: true
+              contents: |
+                [Unit]
+                Description=SRIOV Custom Auto VF Creation
+                Wants=network-online.target  rke2-server.target
+                After=network.target network-online.target rke2-server.target
+                [Service]
+                User=root
+                Type=forking
+                TimeoutStartSec=1800
+                ExecStart=/bin/sh -c "while ! /var/lib/rancher/rke2/bin/kubectl --kubeconfig=/etc/rancher/rke2/rke2.yaml wait --for condition=ready nodes --timeout=30m --all ; do sleep 10 ; done"
+                ExecStartPost=/bin/sh -c "/opt/sriov/sriov-auto-filler.sh"
+                RemainAfterExit=yes
+                KillMode=process
+                [Install]
+                WantedBy=multi-user.target`;
+        } else {
+            units += `
+            - name: dpdk-vf-creation.service
+              enabled: true
+              contents: |
+                [Unit]
+                Description=DPDK VF creation service
+                Wants=network-online.target  rke2-server.target
+                After=network.target network-online.target rke2-server.target
+                [Service]
+                User=root
+                Type=forking
+                TimeoutStartSec=900
+                ExecStart=/bin/sh -c "dpdk-devbind.py -b vfio-pci \${DPDK_PCI_ADDRESS}"
+                ExecStartPost=/bin/sh -c "echo 1 > /sys/bus/pci/devices/\${DPDK_PCI_ADDRESS}/sriov_numvfs"
+                ExecStartPost=/bin/sh -c "pf_bb_config ACC200 -v 00112233-4455-6677-8899-aabbccddeeff -c /opt/pf-bb-config/acc200_config_vf_5g.cfg; sleep 2"
+                RemainAfterExit=yes
+                KillMode=process
+                [Install]
+                WantedBy=multi-user.target`;
+        }
     }
 
     return units;
@@ -913,9 +1140,23 @@ function generateVariablesList(config) {
 
     // SR-IOV variables
     if (config.sriov) {
-        variables.push({ name: 'SRIOV_VENDOR', desc: 'SR-IOV device vendor ID', example: '8086' });
-        variables.push({ name: 'SRIOV_DEVICE', desc: 'SR-IOV device ID', example: '0d58' });
-        variables.push({ name: 'SRIOV_NET_INTERFACE', desc: 'SR-IOV network interface PF name', example: 'enp1s0f0' });
+        if (config.sriovMode === 'auto') {
+            variables.push({ name: 'RESOURCE_NAME1', desc: 'SR-IOV resource name #1', example: 'intel_sriov_netdevice' });
+            variables.push({ name: 'SRIOV_NIC_NAME1', desc: 'Network interface name #1', example: 'enp1s0f0' });
+            variables.push({ name: 'PF_NAME1', desc: 'Physical function name #1', example: 'enp1s0f0' });
+            variables.push({ name: 'DRIVER_NAME1', desc: 'Driver name #1', example: 'vfio-pci' });
+            variables.push({ name: 'NUM_VFS1', desc: 'Number of VFs to create #1', example: '4' });
+            variables.push({ name: 'RESOURCE_NAME2', desc: 'SR-IOV resource name #2', example: 'intel_sriov_netdevice2' });
+            variables.push({ name: 'SRIOV_NIC_NAME2', desc: 'Network interface name #2', example: 'enp1s0f1' });
+            variables.push({ name: 'PF_NAME2', desc: 'Physical function name #2', example: 'enp1s0f1' });
+            variables.push({ name: 'DRIVER_NAME2', desc: 'Driver name #2', example: 'vfio-pci' });
+            variables.push({ name: 'NUM_VFS2', desc: 'Number of VFs to create #2', example: '4' });
+        } else {
+            variables.push({ name: 'SRIOV_VENDOR', desc: 'SR-IOV device vendor ID (hex)', example: '8086' });
+            variables.push({ name: 'SRIOV_DEVICE', desc: 'SR-IOV device ID (hex)', example: '0d58' });
+            variables.push({ name: 'SRIOV_NET_INTERFACE', desc: 'SR-IOV network interface PF name', example: 'enp1s0f0' });
+            variables.push({ name: 'DPDK_PCI_ADDRESS', desc: 'PCI address for DPDK/FEC device', example: '0000:00:1f.6' });
+        }
     }
 
     // CPU Manager variables

@@ -186,6 +186,18 @@
                     </div>
                 </div>
 
+                <div id="sriovOptions" class="question hidden" style="margin-top: 15px;">
+                    <label for="sriovMode">SR-IOV Configuration Mode:</label>
+                    <select id="sriovMode">
+                        <option value="auto">Auto Discovery (SR-IOV Operator)</option>
+                        <option value="manual">Manual (Device Plugin + DPDK/FEC)</option>
+                    </select>
+                    <div class="info-box">
+                        <strong>Auto:</strong> Simpler setup, only needs interface names and VF counts.<br>
+                        <strong>Manual:</strong> For advanced use cases with DPDK, FEC accelerators (ACC100/ACC200), requires PCI addresses and vendor/device IDs.
+                    </div>
+                </div>
+
                 <div class="question">
                     <label>
                         <input type="checkbox" id="generateBMH" style="width: auto; margin-right: 8px;">

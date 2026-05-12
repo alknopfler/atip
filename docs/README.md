@@ -17,7 +17,10 @@ This generator helps create custom CAPI manifests based on your specific require
   - Node topology (single-node, multi-node with/without workers)
   - MetalLB for HA control plane
   - Airgap/private registry support
-  - Telco features (SR-IOV, CPU Manager, CIS profile)
+  - Telco features:
+    - SR-IOV (Auto discovery or Manual with DPDK/FEC)
+    - CPU Manager / Performance tuning
+    - CIS security profile
 
 - **Generated Outputs**:
   - Complete CAPI manifests
@@ -105,7 +108,42 @@ The generator can create manifests for scenarios like:
   - Network: Static IP
   - IP: Dual-stack
   - Deployment: Airgap
-  - Features: SR-IOV, CPU Manager, CIS profile, Multus
+  - Features: SR-IOV (Auto mode), CPU Manager, CIS profile, Multus
+
+## SR-IOV Configuration Modes
+
+The generator supports two SR-IOV modes:
+
+### Auto Discovery Mode (Recommended)
+
+- Uses SR-IOV Network Operator
+- Simpler configuration - only needs interface names and VF counts
+- Automatic resource discovery
+- Uses `sriov-custom-auto-vfs.service` systemd unit
+- Best for: Standard SR-IOV networking use cases
+
+**Required Variables:**
+
+- `RESOURCE_NAME1/2`: Resource identifiers
+- `SRIOV_NIC_NAME1/2`: Network interface names
+- `PF_NAME1/2`: Physical function names
+- `DRIVER_NAME1/2`: Driver (e.g., vfio-pci)
+- `NUM_VFS1/2`: Number of VFs to create
+
+### Manual Mode (Advanced)
+
+- Uses SR-IOV Device Plugin DaemonSet
+- Requires detailed hardware knowledge (PCI addresses, vendor/device IDs)
+- Support for DPDK and FEC accelerators (ACC100/ACC200)
+- Uses `dpdk-vf-creation.service` systemd unit
+- Best for: Advanced telco workloads with FEC cards, DPDK, specific hardware tuning
+
+**Required Variables:**
+
+- `SRIOV_VENDOR`: Vendor ID (e.g., 8086 for Intel)
+- `SRIOV_DEVICE`: Device ID (e.g., 0d58)
+- `SRIOV_NET_INTERFACE`: PF interface name
+- `DPDK_PCI_ADDRESS`: PCI address for DPDK binding
 
 ## Files
 
