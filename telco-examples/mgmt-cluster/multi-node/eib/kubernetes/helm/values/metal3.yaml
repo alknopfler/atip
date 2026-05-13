@@ -1,7 +1,7 @@
 global:
   ironicIP: ${METAL3_VIP}
   enable_vmedia_tls: false
-  additionalTrustedCAs: false
+  # trustedCA: tls-ca-bundle  # Optional: Uncomment and set to ConfigMap name containing full CA bundle
 metal3-ironic:
   global:
     predictableNicNames: "true"
