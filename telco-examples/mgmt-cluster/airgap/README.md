@@ -139,7 +139,7 @@ $ cd telco-examples/mgmt-cluster/airgap/eib
 
 ```bash
 $ sudo podman run --rm --privileged -it -v $PWD:/eib \
-registry.suse.com/edge/3.6/edge-image-builder:1.3.3 \
+registry.suse.com/edge/3.6/edge-image-builder:1.3.3.1 \
 build --definition-file mgmt-cluster-airgap.yaml
 ```
 
