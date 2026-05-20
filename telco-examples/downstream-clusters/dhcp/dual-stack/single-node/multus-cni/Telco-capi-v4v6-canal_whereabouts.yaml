@@ -31,7 +31,7 @@ metadata:
   namespace: default
 spec:
   controlPlaneEndpoint:
-    host: ${EDGE_CONTROL_PLANE_IP_V4}
+    host: ${DOWNSTREAM_CONTROL_PLANE_IP_V4}
     port: 6443
   cloudProviderEnabled: false
 ---
@@ -58,7 +58,7 @@ spec:
     cni: canal
     cniMultusEnable: true
     tlsSan:
-    - ${EDGE_CONTROL_PLANE_IP_V6}
+    - ${DOWNSTREAM_CONTROL_PLANE_IP_V6}
   agentConfig:
     format: ignition
     cisProfile: cis

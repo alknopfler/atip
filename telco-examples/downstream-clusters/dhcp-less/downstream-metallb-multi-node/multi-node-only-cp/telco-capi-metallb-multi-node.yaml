@@ -29,7 +29,7 @@ metadata:
   namespace: default
 spec:
   controlPlaneEndpoint:
-    host: ${EDGE_VIP_ADDRESS}
+    host: ${DOWNSTREAM_VIP_ADDRESS}
     port: 6443
   cloudProviderEnabled: false
 ---
@@ -54,12 +54,12 @@ spec:
     rollingUpdate:
       maxSurge: 0
   registrationMethod: "control-plane-endpoint"
-  registrationAddress: ${EDGE_VIP_ADDRESS}
+  registrationAddress: ${DOWNSTREAM_VIP_ADDRESS}
   serverConfig:
     cni: cilium
     tlsSan:
-    - ${EDGE_VIP_ADDRESS}
-    - https://${EDGE_VIP_ADDRESS}.sslip.io
+    - ${DOWNSTREAM_VIP_ADDRESS}
+    - https://${DOWNSTREAM_VIP_ADDRESS}.sslip.io
   agentConfig:
     format: ignition
     additionalUserData:
@@ -99,7 +99,7 @@ spec:
                   spec:
                     chart: oci://registry.suse.com/edge/charts/endpoint-copier-operator
                     targetNamespace: endpoint-copier-operator
-                    version: 305.0.1+up0.3.0
+                    version: 306.0.1+up0.3.0
                     createNamespace: true
             - path: /var/lib/rancher/rke2/server/manifests/metallb.yaml
               overwrite: true
@@ -113,7 +113,7 @@ spec:
                   spec:
                     chart: oci://registry.suse.com/edge/charts/metallb
                     targetNamespace: metallb-system
-                    version: 305.0.1+up0.15.2
+                    version: 306.0.2+up0.15.3
                     createNamespace: true
 
             - path: /var/lib/rancher/rke2/server/manifests/metallb-cr.yaml
@@ -127,7 +127,7 @@ spec:
                     namespace: metallb-system
                   spec:
                     addresses:
-                      - ${EDGE_VIP_ADDRESS}/32
+                      - ${DOWNSTREAM_VIP_ADDRESS}/32
                     serviceAllocation:
                       priority: 100
                       namespaces:

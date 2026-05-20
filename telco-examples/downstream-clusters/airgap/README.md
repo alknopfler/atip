@@ -1,32 +1,32 @@
-# Edge clusters for Telco
+# Downstream clusters for Telco
 
 ## Introduction
 
-This is an example to demonstrate how to deploy an air-gap downstream/edge cluster using SUSE Telco Cloud and the fully automated directed network provisioning.
+This is an example to demonstrate how to deploy an air-gap downstream/downstream cluster using SUSE Telco Cloud and the fully automated directed network provisioning.
 
-There are two steps to deploy an edge cluster:
+There are two steps to deploy an downstream cluster:
 
-- Create the image for the edge cluster with Kiwi (to create the base image) + Edge Image Builder to customize it including all the packages, dependencies and requirements.
-- Deploy the edge cluster using metal3 and the image created in the previous step.
+- Create the image for the downstream cluster with Kiwi (to create the base image) + Edge Image Builder to customize it including all the packages, dependencies and requirements.
+- Deploy the downstream cluster using metal3 and the image created in the previous step.
 
 Important notes:
 
 * In the following examples, we will assume that the management cluster is already deployed and running. If you want to deploy the management cluster, please refer to the [Management Cluster example](../../mgmt-cluster/airgap/README.md).
-* In the following examples, we are assuming that the edge cluster will use baremetal Servers. If you want to deploy the full workflow using virtual machines, please refer to the [metal3-demo repo](https://github.com/suse-edge/metal3-demo)
+* In the following examples, we are assuming that the downstream cluster will use baremetal Servers. If you want to deploy the full workflow using virtual machines, please refer to the [metal3-demo repo](https://github.com/suse-edge/metal3-demo)
 * In the following examples, as we're creating an air-gap scenario, we are assuming that you have a local private registry deployed in the same network. 
 
-## Create the image for the edge cluster
+## Create the image for the downstream cluster
 
 ### Prerequisites
 
 To prepare an airgap environment, we will use a private local registry (already deployed and configured) to store some images (helm-chart oci images and some other images), and we will use the Edge Image Builder to include the rke2-images artifacts which are a requirement to use the cluster-api provider for rke2.
 
-Using the example folder `telco-examples/edge-clusters/airgap/eib` we will create the basic structure in order to build the image for the edge cluster: 
+Using the example folder `telco-examples/downstream-clusters/airgap/eib` we will create the basic structure in order to build the image for the downstream cluster: 
 
 You need to modify the following values in the `telco-edge-airgap-cluster.yaml` file:
 
-- `${ROOT_PASSWORD}` - The root password for the edge cluster. This could be generated using `openssl passwd -6 PASSWORD` and replacing PASSWORD with the desired password, and then replacing the value in the `telco-edge-cluster.yaml` file.
-- `${SCC_REGISTRATION_CODE}` - The registration code for the SUSE Customer Center for the SLE Micro product. This could be obtained from the SUSE Customer Center and replacing the value in the `telco-edge-cluster.yaml` file.
+- `${ROOT_PASSWORD}` - The root password for the downstream cluster. This could be generated using `openssl passwd -6 PASSWORD` and replacing PASSWORD with the desired password, and then replacing the value in the `telco-downstream-cluster.yaml` file.
+- `${SCC_REGISTRATION_CODE}` - The registration code for the SUSE Customer Center for the SLE Micro product. This could be obtained from the SUSE Customer Center and replacing the value in the `telco-downstream-cluster.yaml` file.
 
 You need to modify the following folder:
 
@@ -34,16 +34,16 @@ You need to modify the following folder:
 
 ```
 mkdir output
-sudo podman run --privileged -v /etc/zypp/repos.d:/micro-sdk/repos/ -v $(pwd)/output:/tmp/output -it registry.suse.com/edge/3.5/kiwi-builder:10.2.29.1 build-image -p Base-RT-SelfInstall
+sudo podman run --privileged -v /etc/zypp/repos.d:/micro-sdk/repos/ -v $(pwd)/output:/tmp/output -it registry.suse.com/edge/3.6/kiwi-builder:10.2.29.1 build-image -p Base-RT-SelfInstall
 ```
 
-The resulting raw image needs to be copied over to the `base-image` folder and used as a reference in the `eib/telco-edge-cluster.yaml` file:
+The resulting raw image needs to be copied over to the `base-image` folder and used as a reference in the `eib/telco-downstream-cluster.yaml` file:
 
 ```
 cp $(pwd)/output/*.raw base-images/
 ```
 
-> **_Note:_** For more information about this process you can follow the [full guide instructions in official docs](https://documentation.suse.com/suse-edge/3.5/html/edge/guides-kiwi-builder-images.html)
+> **_Note:_** For more information about this process you can follow the [full guide instructions in official docs](https://documentation.suse.com/suse-edge/3.6/html/edge/guides-kiwi-builder-images.html)
 
 
 ### Preparing the airgap artifacts
@@ -98,41 +98,41 @@ The following steps are required to prepare the airgap artifacts using [`seactl`
 
 5. Copy the generated RKE2 artifacts from the output directory to the `custom/files` folder to be consumed by EIB during the build process:
    ```
-   $ cp output/rke2-images*.tar.zst ~/telco-examples/edge-clusters/airgap/eib/custom/files/
-   $ cp output/rke2.linux-amd64.tar.gz ~/telco-examples/edge-clusters/airgap/eib/custom/files/
-   $ cp output/sha256sum-amd64.txt ~/telco-examples/edge-clusters/airgap/eib/custom/files/
+   $ cp output/rke2-images*.tar.zst ~/telco-examples/downstream-clusters/airgap/eib/custom/files/
+   $ cp output/rke2.linux-amd64.tar.gz ~/telco-examples/downstream-clusters/airgap/eib/custom/files/
+   $ cp output/sha256sum-amd64.txt ~/telco-examples/downstream-clusters/airgap/eib/custom/files/
    ```
 
 > **_Note:_** The release container image already bundles `/release_manifest.yaml` and `/release_images.yaml` internally, so no additional manifest files need to be provided. For full flag reference and advanced usage, see the [seactl documentation](https://github.com/suse-edge/seactl/blob/main/README.md).
 
 
-### Building the Edge Cluster Image using EIB
+### Building the Downstream Cluster Image using EIB
 
 All the following commands in this section could be executed on any x86_64 Linux-based environment with Podman installed. There are no other prerequisites or dependencies for building the image.
 
 #### Generate the image with our configuration for Telco profile
 
 ```
-$ cd telco-examples/edge-clusters/airgap/eib
+$ cd telco-examples/downstream-clusters/airgap/eib
 $ sudo podman run --rm --privileged -it -v $PWD:/eib \
-registry.suse.com/edge/3.5/edge-image-builder:1.3.2 \
+registry.suse.com/edge/3.6/edge-image-builder:1.3.3 \
 build --definition-file telco-edge-airgap-cluster.yaml
 ```
 
-## Deploy the Edge Clusters
+## Deploy the Downstream Clusters
 
-### Deploy a single-node Edge Cluster with the image generated and Telco profiles in an air-gap environment
+### Deploy a single-node Downstream Cluster with the image generated and Telco profiles in an air-gap environment
 
-There are 2 steps to deploy a single-node edge cluster with all Telco Capabilities enabled:
+There are 2 steps to deploy a single-node downstream cluster with all Telco Capabilities enabled:
 
 - Enroll the new baremetal host in the management cluster.
 - Provision the new host using the CAPI manifests and the image generated in the previous step. 
 
-Remember, that working with an air-gap environment requires a local private registry, some additional [preparation steps](#preparing-the-airgap-aritfacts) and the artifacts required to deploy the edge cluster.
+Remember, that working with an air-gap environment requires a local private registry, some additional [preparation steps](#preparing-the-airgap-aritfacts) and the artifacts required to deploy the downstream cluster.
 
 #### Enroll the new baremetal host
 
-Using the folder `telco-examples/airgap` we will create the components required to deploy an edge cluster using the image generated in the previous step and the telco profiles configured.
+Using the folder `telco-examples/airgap` we will create the components required to deploy an downstream cluster using the image generated in the previous step and the telco profiles configured.
 
 The first step is to enroll the new baremetal host in the management cluster. To do that, you need to modify the `bmh-example.yaml` file and replace the following with your values:
 
@@ -145,12 +145,12 @@ The first step is to enroll the new baremetal host in the management cluster. To
 
 In case you want to use a dhcp-less environment, you will need to configure and replace also the following parameters:
 
-- `${CONTROLPLANE_INTERFACE}` - The control plane interface to be used for the edge cluster (e.g `eth0`).
-- `${CONTROLPLANE_IP}` - The IP address to be used as an endpoint for the edge cluster (should match the kubeapi-server endpoint).
-- `${CONTROLPLANE_PREFIX}` - The CIDR to be used for the edge cluster (e.g `24` in case you want `/24` or `255.255.255.0`).
-- `${CONTROLPLANE_GATEWAY}` - The gateway to be used for the edge cluster (e.g `192.168.100.1`).
+- `${CONTROLPLANE_INTERFACE}` - The control plane interface to be used for the downstream cluster (e.g `eth0`).
+- `${CONTROLPLANE_IP}` - The IP address to be used as an endpoint for the downstream cluster (should match the kubeapi-server endpoint).
+- `${CONTROLPLANE_PREFIX}` - The CIDR to be used for the downstream cluster (e.g `24` in case you want `/24` or `255.255.255.0`).
+- `${CONTROLPLANE_GATEWAY}` - The gateway to be used for the downstream cluster (e.g `192.168.100.1`).
 - `${CONTROLPLANE_MAC}` - The MAC address to be used for the control plane interface (e.g `00:0c:29:3e:3e:3e`).
-- `${DNS_SERVER}` - The DNS to be used for the edge cluster (e.g `192.168.100.2`).
+- `${DNS_SERVER}` - The DNS to be used for the downstream cluster (e.g `192.168.100.2`).
 
 Then, you need to apply the changes using the following command into the management cluster:
 
@@ -179,23 +179,23 @@ The first thing is to modify the `telco-capi-airgap.yaml` file and replace the f
   ```
   or following the [official documentation](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials).
 - `${REGISTRY_USERNAME}` and `${REGISTRY_PASSWORD}` - In the case your private registry enables the basic auth mechanism, you need to include the username and password to be used for the private registry. You need to encode those in base64 format and replace the variables.
-- `${EDGE_CONTROL_PLANE_IP}` - The IP address to be used as a endpoint for the edge cluster (should match the kubeapi-server endpoint).
-- `${PRIVATE_REGISTRY_URL}` - The URL for the private registry to be used for the edge cluster (e.g `myregistry:5000`).
+- `${DOWNSTREAM_CONTROL_PLANE_IP}` - The IP address to be used as a endpoint for the downstream cluster (should match the kubeapi-server endpoint).
+- `${PRIVATE_REGISTRY_URL}` - The URL for the private registry to be used for the downstream cluster (e.g `myregistry:5000`).
 - `${RESOURCE_NAME1}` - The resource name to be used in order to identify the VFs to be used for the workloads in Kubernetes.
 - `${SRIOV-NIC-NAME1}` - The network interface to be used for creating the VFs (e.g `eth0` which means the first network interface in the server. You can get that info using `ip link` command to list the network interfaces).
 - `${PF_NAME1}` - The network interface or physical function (usually filters in the network interface) to be used for the SRIOV.
 - `${DRIVER_NAME1}` - The driver to be used for the interface and VFs (e.g `vfio-pci`).
 - `${NUM_VFS1}` - The number of VFs to be created for the network interface (e.g `2`).
-- `${SRIOV_CRD_VERSION}` - The version of the SRIOV CRD chart to be used for the edge cluster, for example `303.0.2+up1.5.0`.
-- `${SRIOV_OPERATOR_VERSION}` - The version of the SRIOV Operator chart to be used for the edge cluster, for example, `303.0.2+up1.5.0`.
-- `${ISOLATED_CPU_CORES}` - The isolated CPU cores to be used for workloads pinning some specific ones. You could get that info using `lscpu` command to list the CPU cores and then, select the cores to be used for the edge cluster in case you need CPU pinning for your workloads. For example, `1-18,21-38` could be used for the isolated cores.
-- `${NON-ISOLATED_CPU_CORES}` - The cores listed could be used shared for the rest of the process running on the edge cluster. For example, `0,20,21,39` could be used for the non-isolated cores.
+- `${SRIOV_CRD_VERSION}` - The version of the SRIOV CRD chart to be used for the downstream cluster, for example `303.0.2+up1.5.0`.
+- `${SRIOV_OPERATOR_VERSION}` - The version of the SRIOV Operator chart to be used for the downstream cluster, for example, `303.0.2+up1.5.0`.
+- `${ISOLATED_CPU_CORES}` - The isolated CPU cores to be used for workloads pinning some specific ones. You could get that info using `lscpu` command to list the CPU cores and then, select the cores to be used for the downstream cluster in case you need CPU pinning for your workloads. For example, `1-18,21-38` could be used for the isolated cores.
+- `${NON-ISOLATED_CPU_CORES}` - The cores listed could be used shared for the rest of the process running on the downstream cluster. For example, `0,20,21,39` could be used for the non-isolated cores.
 - `${CPU_FREQUENCY}` - The frequency to be used for the CPU cores. For example, `2500000` represents 2.5Ghz configuration and it could be used to set the CPU cores to the max performance.
-- `${RKE2_VERSION}` - The RKE2 version to be used for the edge cluster. For example, `1.30.3+rke2r1` could be used for the edge cluster.
+- `${RKE2_VERSION}` - The RKE2 version to be used for the downstream cluster. For example, `1.30.3+rke2r1` could be used for the downstream cluster.
 
-You can also modify any other parameter in the `telco-capi-airgap.yaml` file to match with your requirements e.g. DPDK configuration, number of VFs to generate, number of SRIOV interfaces, etc. This is basically a template to be used for the edge cluster deployment.
+You can also modify any other parameter in the `telco-capi-airgap.yaml` file to match with your requirements e.g. DPDK configuration, number of VFs to generate, number of SRIOV interfaces, etc. This is basically a template to be used for the downstream cluster deployment.
 
-** Note: Remember to locate the `eibimage-slmicro-rt-telco.raw` file generated in [Create the image for the edge cluster](#create-the-image-for-the-edge-cluster) into the management cluster httpd cache folder to be used during the edge cluster provisioning step.
+** Note: Remember to locate the `eibimage-slmicro-rt-telco.raw` file generated in [Create the image for the downstream cluster](#create-the-image-for-the-downstream-cluster) into the management cluster httpd cache folder to be used during the downstream cluster provisioning step.
 
 Then, you need to apply the changes using the following command into the management cluster:
 

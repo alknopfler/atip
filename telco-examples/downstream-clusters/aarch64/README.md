@@ -2,23 +2,23 @@
 
 ## Introduction
 
-This is an example to demonstrate how to deploy an edge cluster for Telco using SUSE ATIP and the fully automated directed network provisioning using aaarch64 architecture.
+This is an example to demonstrate how to deploy an downstream cluster for Telco using SUSE ATIP and the fully automated directed network provisioning using aaarch64 architecture.
 
-There are two steps to deploy an edge cluster:
+There are two steps to deploy an downstream cluster:
 
-- Create the image for the edge cluster with Kiwi (to create the base image) + Edge Image Builder to customize it including all the packages, dependencies and requirements.
-- Deploy the edge cluster using metal3 and the image created in the previous step.
+- Create the image for the downstream cluster with Kiwi (to create the base image) + Edge Image Builder to customize it including all the packages, dependencies and requirements.
+- Deploy the downstream cluster using metal3 and the image created in the previous step.
 
-## Create the image for the edge cluster
+## Create the image for the downstream cluster
 
 ### Prerequisites
 
-Using the example folder `telco-examples/edge-clusters/aarch64/eib`, we will create the basic structure in order to build the image for the edge cluster: 
+Using the example folder `telco-examples/downstream-clusters/aarch64/eib`, we will create the basic structure in order to build the image for the downstream cluster: 
 
-You need to modify the following values in the `telco-edge-cluster-aarch64.yaml` file:
+You need to modify the following values in the `telco-downstream-cluster-aarch64.yaml` file:
 
-- `${ROOT_PASSWORD}` - The root password for the management cluster. This could be generated using `openssl passwd -6 PASSWORD` and replacing PASSWORD with the desired password, and then replacing the value in the `telco-edge-cluster.yaml` file.
-- `${SCC_REGISTRATION_CODE}` - The registration code for the SUSE Customer Center for the SLE Micro product. This could be obtained from the SUSE Customer Center and replacing the value in the `telco-edge-cluster.yaml` file.
+- `${ROOT_PASSWORD}` - The root password for the management cluster. This could be generated using `openssl passwd -6 PASSWORD` and replacing PASSWORD with the desired password, and then replacing the value in the `telco-downstream-cluster.yaml` file.
+- `${SCC_REGISTRATION_CODE}` - The registration code for the SUSE Customer Center for the SLE Micro product. This could be obtained from the SUSE Customer Center and replacing the value in the `telco-downstream-cluster.yaml` file.
 
 You need to modify the following folder:
 
@@ -26,46 +26,46 @@ You need to modify the following folder:
 
 ```
 mkdir output
-sudo podman run --privileged -v /etc/zypp/repos.d:/micro-sdk/repos/ -v $(pwd)/output:/tmp/output -it registry.suse.com/edge/3.5/kiwi-builder:10.2.29.1 build-image -p Base-RT-SelfInstall
+sudo podman run --privileged -v /etc/zypp/repos.d:/micro-sdk/repos/ -v $(pwd)/output:/tmp/output -it registry.suse.com/edge/3.6/kiwi-builder:10.2.29.1 build-image -p Base-RT-SelfInstall
 ```
 
-The resulting raw image needs to be copied over to the `base-image` folder and used as a reference in the `eib/telco-edge-cluster.yaml` file:
+The resulting raw image needs to be copied over to the `base-image` folder and used as a reference in the `eib/telco-downstream-cluster.yaml` file:
 
 ```
 cp $(pwd)/output/*.raw base-images/
 ```
 
-> **_Note:_** For more information about this process you can follow the [full guide instructions in official docs](https://documentation.suse.com/suse-edge/3.5/html/edge/guides-kiwi-builder-images.html)
+> **_Note:_** For more information about this process you can follow the [full guide instructions in official docs](https://documentation.suse.com/suse-edge/3.6/html/edge/guides-kiwi-builder-images.html)
 
-### Building the Edge Cluster Image using EIB
+### Building the Downstream Cluster Image using EIB
 
 All the following commands in this section could be executed using any linux laptop/server aarch64 with podman installed. You don't need to have a specific environment to build the image.
 
 #### Generate the image with our configuration for Telco profile
 
 ```
-$ cd telco-examples/edge-clusters/aarch64/eib
+$ cd telco-examples/downstream-clusters/aarch64/eib
 $ sudo podman run --rm --privileged -it -v $PWD:/eib \
-registry.suse.com/edge/3.5/edge-image-builder:1.3.2 \
-build --definition-file telco-edge-cluster-aarch64.yaml
+registry.suse.com/edge/3.6/edge-image-builder:1.3.3 \
+build --definition-file telco-downstream-cluster-aarch64.yaml
 ```
 
-## Deploy the Edge Clusters
+## Deploy the Downstream Clusters
 
-All the following steps have to be executed from the management cluster in order to deploy the edge clusters.
+All the following steps have to be executed from the management cluster in order to deploy the downstream clusters.
 
-### Example 1 - Deploy a single-node Edge Cluster with the image generated and Telco profiles using aarch64 architecture
+### Example 1 - Deploy a single-node Downstream Cluster with the image generated and Telco profiles using aarch64 architecture
 
-There are 2 steps to deploy a single-node edge cluster with all Telco Capabilities enabled:
+There are 2 steps to deploy a single-node downstream cluster with all Telco Capabilities enabled:
 
 - Enroll the new Baremetal host in the management cluster.
 - Provision the new host using the CAPI manifests and the image generated in the previous step. There are two possible manifests to be used:
   - `capi-minimal.yaml`: This manifest is a template to be used in case you want to deploy a basic rke2 cluster with the image generated.
-  - `capi-telco-aarch64.yaml`: This manifest is a template to be used in case you want to deploy some telco profiles and capabilities in the edge cluster.
+  - `capi-telco-aarch64.yaml`: This manifest is a template to be used in case you want to deploy some telco profiles and capabilities in the downstream cluster.
 
 #### Enroll the new Baremetal host
 
-Using the folder `telco-examples/aarch64` we will create the components required to deploy a single-node edge cluster using the image generated in the previous step and the telco profiles configured.
+Using the folder `telco-examples/aarch64` we will create the components required to deploy a single-node downstream cluster using the image generated in the previous step and the telco profiles configured.
 
 The first step is to enroll the new Baremetal host in the management cluster. To do that, you need to modify the `bmh-example.yaml` file and replace the following with your values:
 
@@ -78,12 +78,12 @@ The first step is to enroll the new Baremetal host in the management cluster. To
 
 In case you want to use a dhcp-less environment, you will need to configure and replace also the following parameters:
 
-- `${CONTROLPLANE_INTERFACE}` - The control plane interface to be used for the edge cluster (e.g `eth0`).
-- `${CONTROLPLANE_IP}` - The IP address to be used as a endpoint for the edge cluster (should match with the kubeapi-server endpoint).
-- `${CONTROLPLANE_PREFIX}` - The CIDR to be used for the edge cluster (e.g `24` in case you want `/24` or `255.255.255.0`).
-- `${CONTROLPLANE_GATEWAY}` - The gateway to be used for the edge cluster (e.g `192.168.100.1`).
+- `${CONTROLPLANE_INTERFACE}` - The control plane interface to be used for the downstream cluster (e.g `eth0`).
+- `${CONTROLPLANE_IP}` - The IP address to be used as a endpoint for the downstream cluster (should match with the kubeapi-server endpoint).
+- `${CONTROLPLANE_PREFIX}` - The CIDR to be used for the downstream cluster (e.g `24` in case you want `/24` or `255.255.255.0`).
+- `${CONTROLPLANE_GATEWAY}` - The gateway to be used for the downstream cluster (e.g `192.168.100.1`).
 - `${CONTROLPLANE_MAC}` - The MAC address to be used for the control plane interface (e.g `00:0c:29:3e:3e:3e`).
-- `${DNS_SERVER}` - The DNS to be used for the edge cluster (e.g `192.168.100.2`).
+- `${DNS_SERVER}` - The DNS to be used for the downstream cluster (e.g `192.168.100.2`).
 
 Then, you need to apply the changes using the following command into the management cluster:
 
@@ -103,19 +103,19 @@ Once the new Baremetal host is available, you need to provision the new host usi
 
 The first thing is to modify the `capi-telco-aarch64.yaml` file and replace the following with your values:
 
-- `${EDGE_CONTROL_PLANE_IP}` - The IP address to be used as a endpoint for the edge cluster (should match with the kubeapi-server endpoint).
+- `${DOWNSTREAM_CONTROL_PLANE_IP}` - The IP address to be used as a endpoint for the downstream cluster (should match with the kubeapi-server endpoint).
 - `${RESOURCE_NAME1}` - The resource name to be used in order to identify the VFs to be used for the workloads in Kubernetes.
 - `${SRIOV-NIC-NAME1}` - The network interface to be used for creating the VFs (e.g `eth0` which means the first network interface in the server. You can get that info using `ip link` command to list the network interfaces).
 - `${PF_NAME1}` - The network interface or physical function (usually filters in the network interface) to be used for the SRIOV.
 - `${DRIVER_NAME1}` - The driver to be used for the interface and VFs (e.g `vfio-pci`).
 - `${NUM_VFS1}` - The number of VFs to be created for the network interface (e.g `2`).
-- `${ISOLATED_CPU_CORES}` - The isolated CPU cores to be used for workloads pinning some specific cpu cores. You could get that info using `lscpu` command to list the CPU cores and then, select the cores to be used for the edge cluster in case you need cpu pinning for your workloads. For example, `1-18,21-38` could be used for the isolated cores.
-- `${NON-ISOLATED_CPU_CORES}` - The cores listed could be used shared for the rest of the process running on the edge cluster. For example, `0,20,21,39` could be used for the non-isolated cores.
+- `${ISOLATED_CPU_CORES}` - The isolated CPU cores to be used for workloads pinning some specific cpu cores. You could get that info using `lscpu` command to list the CPU cores and then, select the cores to be used for the downstream cluster in case you need cpu pinning for your workloads. For example, `1-18,21-38` could be used for the isolated cores.
+- `${NON-ISOLATED_CPU_CORES}` - The cores listed could be used shared for the rest of the process running on the downstream cluster. For example, `0,20,21,39` could be used for the non-isolated cores.
 - `${CPU_FREQUENCY}` - The frequency to be used for the CPU cores. For example, `2500000` represents 2.5Ghz configuration and it could be used to set the CPU cores to the max performance.
 
-You can also modify any other parameter in the `capi-telco-aarch64.yaml` file to match with your requirements e.g. DPDK configuration, number of VFs to generate, number of SRIOV interfaces, etc. This is basically a template to be used for the edge cluster deployment.
+You can also modify any other parameter in the `capi-telco-aarch64.yaml` file to match with your requirements e.g. DPDK configuration, number of VFs to generate, number of SRIOV interfaces, etc. This is basically a template to be used for the downstream cluster deployment.
 
-** Note: Remember to locate the `eibimage-slmicro-rt-telco-arm.raw` file generated in the "[Create the image for the edge cluster](#create-the-image-for-the-edge-cluster)" step into the management cluster httpd cache folder to be used during the edge cluster provision step.
+** Note: Remember to locate the `eibimage-slmicro-rt-telco-arm.raw` file generated in the "[Create the image for the downstream cluster](#create-the-image-for-the-downstream-cluster)" step into the management cluster httpd cache folder to be used during the downstream cluster provision step.
 
 Then, you need to apply the changes using the following command into the management cluster:
 

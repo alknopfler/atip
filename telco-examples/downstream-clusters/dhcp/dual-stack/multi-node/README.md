@@ -1,8 +1,8 @@
-# Edge clusters with dual-stack networking
+# Downstream clusters with dual-stack networking
 
 ## Introduction
 
-This directory contains some sample CAPI manifest files that enable the creation of Edge clusters where the bare metal hosts, and the executing containers on top, are connected through both IPv4 and IPv6, with the following characteristics:
+This directory contains some sample CAPI manifest files that enable the creation of Downstream clusters where the bare metal hosts, and the executing containers on top, are connected through both IPv4 and IPv6, with the following characteristics:
 - multi host scenario
 - DHCP autoconfiguration for IPv4
 - various autoconfiguration approaches for IPv6
@@ -30,7 +30,7 @@ The BMH definitions can be found within the `bmh-example_*.yaml` files. While th
  * Due to limitations in [nmstate](https://nmstate.io/devel/yaml_api.html#ipv6-autoconf), it is not possible to enable SLAAC but disable DHCPv6; for this reason DHCP will always be enabled in the provided examples.
  * The network configuration will only apply to the provisioned BMH and not yet on the inspection phase of the host to gather hardware information. This is due to a bug that will force the use of DHCP and RA for IPv4 and IPv6 respectively with the default settings; a resolution is expected soon.
 
-Once the required BMH file has been selected and refined, in order for it to work, it must also be filled with some values common to all the BMH definitions in addition to the network specific ones previously mentioned. For more information on these values or on how to enroll a Bare Metal Host, please refer to the main Edge Cluster documentation for multi host deployments [here](https://github.com/suse-edge/telco-cloud-examples/tree/main/telco-examples/edge-clusters#example-2---deploy-a-multi-node-ha-cluster-using-metal3-metallb-and-the-image-generated).
+Once the required BMH file has been selected and refined, in order for it to work, it must also be filled with some values common to all the BMH definitions in addition to the network specific ones previously mentioned. For more information on these values or on how to enroll a Bare Metal Host, please refer to the main Downstream Cluster documentation for multi host deployments [here](https://github.com/suse-edge/telco-cloud-examples/tree/main/telco-examples/downstream-clusters#example-2---deploy-a-multi-node-ha-cluster-using-metal3-metallb-and-the-image-generated).
 
 
 ## Cluster definitions
@@ -48,8 +48,8 @@ The definition files come with any CNI plugin specific configuration that may be
     * Regardless of the address management method for the secondary interface, make sure to update the network blocks within the manifest according to your operational needs.
 
 Regardless of the selected file, it should be edited to define at least the following values:
-- `${EDGE_CONTROL_PLANE_IP_V4}` - the IPv4 address to be used as the endpoint for the edge cluster (should match with the kubeapi-server endpoint)
-- `${EDGE_CONTROL_PLANE_IP_V6}` - the additional IPv6 address the edge cluster is reacheable from (should match with the kubeapi-server endpoint)
+- `${DOWNSTREAM_CONTROL_PLANE_IP_V4}` - the IPv4 address to be used as the endpoint for the downstream cluster (should match with the kubeapi-server endpoint)
+- `${DOWNSTREAM_CONTROL_PLANE_IP_V6}` - the additional IPv6 address the downstream cluster is reacheable from (should match with the kubeapi-server endpoint)
 - `${RKE2_VERSION}` - the RKE2 version to be installed during the provisioning by CAPI
 - `http://imagecache.local:8080/eibimage-slmicro60rt.raw` - the URL where the generated EIB image can be located and downloaded during the provisioning; the checksum URL must be updated accordingly as well
 

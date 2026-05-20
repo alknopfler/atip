@@ -1,16 +1,16 @@
-# Example of Edge Cluster with CPU Manager
+# Example of Downstream Cluster with CPU Manager
 
 ## Introduction
 
-This is an example to demonstrate how to deploy an edge cluster with cpu manager enabled in Kubernetes for Telco using SUSE ATIP and the fully automated directed network provisioning.
+This is an example to demonstrate how to deploy an downstream cluster with cpu manager enabled in Kubernetes for Telco using SUSE ATIP and the fully automated directed network provisioning.
 
 ## Configuration
 
-Using the file `telco-examples/edge-clusters/cpu-manager/edge-cluster-cpu-manager.yaml` as an example, you can deploy an edge cluster with cpu manager by modifying the following parameters:
+Using the file `telco-examples/downstream-clusters/cpu-manager/downstream-cluster-cpu-manager.yaml` as an example, you can deploy an downstream cluster with cpu manager by modifying the following parameters:
 
-- `${EDGE_CONTROL_PLANE_IP}` -  The IP address to be used as a endpoint for the edge cluster (should match with the kubeapi-server endpoint).
+- `${DOWNSTREAM_CONTROL_PLANE_IP}` -  The IP address to be used as a endpoint for the downstream cluster (should match with the kubeapi-server endpoint).
 - `${RESERVED_SYSTEM_CPU}` - The number of CPUs to be reserved for the system.
-- `${RKE2_VERSION}` - The version of RKE2 to be installed in the edge cluster.
+- `${RKE2_VERSION}` - The version of RKE2 to be installed in the downstream cluster.
 
 ## Usage 
 

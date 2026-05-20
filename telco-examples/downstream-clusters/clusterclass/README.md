@@ -36,7 +36,7 @@ The instances include the following key components:
 
 For each instance file, you have to replace the following values:
 
-- `${RKE2_VERSION}`: The version of RKE2 to be installed in the edge cluster.
-- `${CONTROL_PLANE_ENDPOINT_HOST}`: The IP address to be used as an endpoint for the edge cluster.
+- `${RKE2_VERSION}`: The version of RKE2 to be installed in the downstream cluster.
+- `${CONTROL_PLANE_ENDPOINT_HOST}`: The IP address to be used as an endpoint for the downstream cluster.
 
 **NOTE**: If you want to add more variables to be applied in each instance cluster, you will need to modify the values here to customize for your cluster instance.

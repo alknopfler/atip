@@ -51,7 +51,7 @@ metadata:
   namespace: default
 spec:
   controlPlaneEndpoint:
-    host: ${EDGE_CONTROL_PLANE_IP}
+    host: ${DOWNSTREAM_CONTROL_PLANE_IP}
     port: 6443
   cloudProviderEnabled: false
 ---
