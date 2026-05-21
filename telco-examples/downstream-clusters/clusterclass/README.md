@@ -15,7 +15,7 @@ This abstraction significantly reduces the amount of configuration required, lea
 The `clusterclass.yaml` file contains the definition of the cluster class. The idea is to encapsulate the complexity of the cluster configuration into a single object, making it easier to manage and deploy clusters using instances files.
 It includes the following key components:
 - **ClusterClass**: The main object that defines the cluster class.
-- **ControlPlane**: Defines the control plane configuration (RKE2ControlPlaneTemplate), including the number of replicas and the image to be used.
+- **ControlPlane**: Defines the control plane configuration (RKE2ControlPlaneTemplate), including the image to be used.
 - **InfrastructureTemplate**: Defines the infrastructure configuration (Metal3ClusterTemplate), including the template for the underlying infrastructure (metal3 in this case).
 - **Patches**: Allows for customization of the cluster class by applying patches to the control plane and infrastructure templates.
 
@@ -27,8 +27,9 @@ The `cluster-instance1.yaml` and `cluster-instance2.yaml` files contain the inst
 The instances include the following key components:
 
 - **Cluster**: The main object that defines the cluster instance. There are some important components here:
-  - **Topology/class**: The name of the cluster class to be used for this instance.
+  - **Topology/classRef**: The name of the cluster class to be used for this instance.
   - **Topology/version**: The version of the cluster class to be used for this instance.
+  - **Topology/controlPlane/replicas**: The number of replicas to be used for this instance.
   - **Topology/variables**: Allows for customization of the cluster instance by applying patches to the control plane and infrastructure templates. This is the instantiation of the cluster class.
 
 - **Metal3MachineTemplate**: Defines the machine template for the cluster instance, including the image to be used and the host selector to identify the target baremetal hosts.
