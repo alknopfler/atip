@@ -1,0 +1,188 @@
+name: YAML Validation
+
+on:
+  pull_request:
+    paths:
+      - 'telco-examples/**/*.yaml'
+      - '.github/workflows/**'
+      - '.github/scripts/lint/**'
+      - '.github/yamllint*.yaml'
+  push:
+    branches:
+      - main
+      - 'bump-*'
+      - 'release-*'
+    paths:
+      - 'telco-examples/**/*.yaml'
+  workflow_dispatch:
+    inputs:
+      directory:
+        description: 'Directory to validate (default: telco-examples)'
+        default: 'telco-examples'
+        required: false
+
+jobs:
+  yaml-syntax:
+    name: YAML Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Run yamllint on CAPI manifests
+        run: |
+          yamllint -c .github/yamllint.yaml telco-examples/downstream-clusters/ || true
+          yamllint -c .github/yamllint.yaml telco-examples/mgmt-cluster/ || true
+        continue-on-error: false
+
+      - name: Run yamllint on EIB configs
+        run: |
+          find telco-examples -path "*/eib/*.yaml" -exec yamllint -c .github/yamllint-eib.yaml {} + || true
+        continue-on-error: false
+
+  capi-schema-validation:
+    name: CAPI Schema Validation
+    runs-on: ubuntu-latest
+    needs: yaml-syntax
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml jsonschema
+          sudo snap install yq
+
+      - name: Cache CRD schemas
+        uses: actions/cache@v4
+        with:
+          path: .schemas
+          key: crd-schemas-${{ hashFiles('telco-examples/**/*.yaml') }}-v1
+          restore-keys: |
+            crd-schemas-
+
+      - name: Auto-detect and download CRD schemas
+        run: |
+          bash .github/scripts/lint/download-crd-schemas.sh ${{ github.event.inputs.directory || 'telco-examples' }}
+
+      - name: Run comprehensive schema validation
+        run: |
+          python3 .github/scripts/lint/validate-with-schemas.py
+
+  capi-custom-validation:
+    name: CAPI Custom Validation Rules
+    runs-on: ubuntu-latest
+    needs: yaml-syntax
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.2/yq_linux_amd64
+          chmod +x /usr/local/bin/yq
+
+      - name: Validate cross-references
+        run: bash .github/scripts/lint/validate-cross-references.sh
+
+      - name: Check required fields
+        run: bash .github/scripts/lint/validate-required-fields.sh
+
+      - name: Validate template variables
+        run: bash .github/scripts/lint/validate-template-vars.sh
+
+  eib-validation:
+    name: EIB Configuration Validation
+    runs-on: ubuntu-latest
+    needs: yaml-syntax
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install jsonschema pyyaml
+
+      - name: Validate EIB configs
+        run: python3 .github/scripts/lint/validate-eib-configs.py
+
+  summary:
+    name: Validation Summary
+    runs-on: ubuntu-latest
+    needs: [yaml-syntax, capi-schema-validation, capi-custom-validation, eib-validation]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## 📊 YAML Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # YAML Syntax
+          if [ "${{ needs.yaml-syntax.result }}" = "success" ]; then
+            echo "✅ **YAML Syntax Check**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **YAML Syntax Check**: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Schema Validation
+          if [ "${{ needs.capi-schema-validation.result }}" = "success" ]; then
+            echo "✅ **Schema Validation**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Schema Validation**: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Custom Validation
+          if [ "${{ needs.capi-custom-validation.result }}" = "success" ]; then
+            echo "✅ **Custom Validation**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Custom Validation**: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # EIB Validation
+          if [ "${{ needs.eib-validation.result }}" = "success" ]; then
+            echo "✅ **EIB Configuration**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **EIB Configuration**: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if any validation failed
+        if: |
+          needs.yaml-syntax.result != 'success' ||
+          needs.capi-schema-validation.result != 'success' ||
+          needs.capi-custom-validation.result != 'success' ||
+          needs.eib-validation.result != 'success'
+        run: |
+          echo "::error::One or more YAML validation checks failed. See summary above."
+          exit 1
+
+      - name: Success message
+        if: |
+          needs.yaml-syntax.result == 'success' &&
+          needs.capi-schema-validation.result == 'success' &&
+          needs.capi-custom-validation.result == 'success' &&
+          needs.eib-validation.result == 'success'
+        run: |
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎉 All validations passed!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Your YAML manifests are ready to merge." >> $GITHUB_STEP_SUMMARY
