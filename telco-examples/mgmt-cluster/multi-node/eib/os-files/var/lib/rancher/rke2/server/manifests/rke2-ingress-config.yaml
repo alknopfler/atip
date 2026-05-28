@@ -1,17 +1,27 @@
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
 metadata:
-  name: rke2-ingress-nginx
+  name: rke2-traefik
   namespace: kube-system
 spec:
   valuesContent: |-
-    controller:
-      config:
-        use-forwarded-headers: "true"
-        enable-real-ip: "true"
-      publishService:
-        enabled: true
-      service:
-        enabled: true
-        type: LoadBalancer
+    ingressClass:
+      isDefaultClass: true
+    ports:
+      web:
+        hostPort: null   # disallow hostPort (not needed when exposed through a LoadBalancer svc)
+        exposedPort: 80
+      websecure:
+        hostPort: null   # disallow hostPort (not needed when exposed through a LoadBalancer svc)
+        exposedPort: 443
+    service:
+      enabled: true
+      type: LoadBalancer
+      spec:
         externalTrafficPolicy: Local
+        allocateLoadBalancerNodePorts: false  # k8s GA from 1.24; supported by MetalLB
+    providers:
+      kubernetesIngressNginx: # this provider allows traefik to "understand" most of the ingress-nginx annotations
+        enabled: true
+        ingressClass: "rke2-ingress-nginx-migration"
+        controllerClass: "rke2.​cattle.​io/ingress-nginx-migration"
