@@ -144,7 +144,7 @@ embeddedArtifactRegistry:
     - name: registry.rancher.com/rancher/neuvector-compliance-config:1.0.12
     - name: registry.rancher.com/rancher/neuvector-controller:5.5.1
     - name: registry.rancher.com/rancher/neuvector-enforcer:5.5.1
-    - name: registry.rancher.com/rancher/nginx-ingress-controller:v1.14.5-hardened1
+    - name: registry.rancher.com/rancher/hardened-traefik:v3.6.10-build20260309
     - name: registry.rancher.com/rancher/cluster-api-addon-provider-fleet:v0.14.1
     - name: registry.rancher.com/rancher/fleet-agent:v0.15.1
     - name: registry.rancher.com/rancher/fleet:v0.15.1
