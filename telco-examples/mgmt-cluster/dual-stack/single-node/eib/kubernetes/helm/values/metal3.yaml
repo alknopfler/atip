@@ -1,7 +1,7 @@
 global:
   ironicIP: ${MGMT_CLUSTER_IP_V4}
   enable_vmedia_tls: false
-  # trustedCA: tls-ca-bundle  # Optional: Uncomment and set to ConfigMap name containing full CA bundle
+  # trustedCAs: tls-ca-bundle  # Optional: Uncomment and set to ConfigMap name containing full CA bundle
 metal3-ironic:
   global:
     predictableNicNames: true
