@@ -2,6 +2,16 @@
 
 # Script generate to tune the performance of the system for running Telco Workloads
 # This script is intended to be run on a worker node in a Telco Edge Cluster
+#
+# Performance tuning applied:
+# - CPU Frequency: Set CPUs to performance governor for maximum frequency
+# - Timer Migration: Disable timer migration to prevent interruptions on isolated CPUs
+# - Kernel Daemons: Migrate kswapd and kcompactd threads to housekeeping CPUs
+# - CPU Latency: Set PM QoS resume latency requirements for isolated CPUs
+# - VMStat Updates: Delay vmstat updates to reduce interruptions (300s interval)
+# - Network Tuning: Configure network buffers and UDP parameters for optimal performance
+# - Kernel Isolation: Move IRQs, RCU, and kernel threads to housekeeping CPUs
+# - Task Migration: Move unbound user processes from isolated to housekeeping CPUs
 
 if [ "$(whoami)" != "root" ]; then
         echo root required to run the script
@@ -95,6 +105,23 @@ delay_vmstat_updates() {
 	sysctl -w vm.stat_interval=300
 }
 
+configure_network_tuning() {
+	# NOTE: The following network tuning values are examples that have been tested and validated.
+	# However, they should be adapted to your specific use case, workload requirements, and hardware configuration.
+	echo "=== Configure: Network tuning parameters ==="
+	sysctl -w net.core.rmem_max=1342177280
+	sysctl -w net.core.wmem_max=516777216
+	sysctl -w net.core.rmem_default=10000000
+	sysctl -w net.core.wmem_default=10000000
+	sysctl -w net.core.netdev_max_backlog=416384
+	sysctl -w net.core.optmem_max=25165824
+	sysctl -w net.ipv4.udp_mem="11416320 15221760 22832640"
+	sysctl -w net.core.netdev_budget=1024
+	sysctl -w net.ipv4.udp_rmem_min=16384
+	sysctl -w net.ipv4.udp_wmem_min=16384
+	sysctl -w kernel.sched_rt_runtime_us=-1
+}
+
 fix_kernel_isolation() {
 	echo "=== Stop IRQ Balance ==="
 	systemctl stop irqbalance 2>/dev/null
@@ -164,5 +191,6 @@ unset_timer_migration
 migrate_kdaemons_hk
 set_isolatecpu_latency
 delay_vmstat_updates
+configure_network_tuning
 fix_kernel_isolation
 move_tasks
